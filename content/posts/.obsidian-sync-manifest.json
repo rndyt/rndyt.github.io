@@ -4,9 +4,14 @@
     "Agent/自顶向下的大语言模型基础介绍（一）.md": {
       "archiveId": "X-008",
       "slug": "post-x-008"
+    },
+    "Agent/自顶向下的大语言模型基础介绍（二）.md": {
+      "archiveId": "X-009",
+      "slug": "post-x-009"
     }
   },
   "files": [
+    "obsidian/post-x-009.md",
     "obsidian/post-x-008.md"
   ],
   "assets": [],
@@ -18,6 +23,7 @@
     "X-005",
     "X-006",
     "X-007",
-    "X-008"
+    "X-008",
+    "X-009"
   ]
 }
