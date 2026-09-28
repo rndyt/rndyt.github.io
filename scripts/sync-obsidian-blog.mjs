@@ -217,8 +217,6 @@ if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) 
   const result = await syncBlog({
     source: process.argv[2] ?? process.env.OBSIDIAN_BLOG_DIR ?? join(homedir(), 'Nutstore Files/ObsidianVault/Blog'),
     destination: join(repo, 'content/posts'), assets: join(repo, 'public/post-assets'),
-    // Retired sample IDs remain reserved so old bookmarks cannot target new posts.
-    reservedIds: Array.from({ length: 7 }, (_, i) => `X-${String(i + 1).padStart(3, '0')}`),
   });
   console.log(`已同步 ${result.posts} 篇文章、${result.assets} 个附件。`);
   for (const warning of result.warnings) console.warn(warning);

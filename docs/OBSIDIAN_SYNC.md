@@ -39,10 +39,10 @@ draft: false
 
 - `draft: true` 或 `publish: false` 不发布；普通笔记默认发布。
 - 未指定分类时使用第一层文件夹名；`Agent` 映射为 `AI 实践`，根目录默认 `工程文章`。
-- `archiveId` 自动分配，`slug` 优先使用明确配置，其次英文文件名，中文文件名默认 `post-x-008` 这样的稳定地址。
+- `archiveId` 自动分配，`slug` 优先使用明确配置，其次英文文件名，中文文件名默认 `post-x-001` 这样的稳定地址。
 - `content/posts/.obsidian-sync-manifest.json` 保存路径与编号/地址映射，必须提交。删除文章不回收编号。
 - 已同步文章不可修改编号或 slug。若重命名/移动原笔记，需要同步修改清单 `entries` 的路径键以保留原身份，否则按新文章分配编号。
-- 七篇历史示例存于 `reference/blog-samples/`，不参与构建；X-001 至 X-007 保留，旧收藏不会指向新文章。
+- 七篇历史示例存于 `reference/blog-samples/`，不参与构建，也不占用编号。正式文章从 X-001 起分配；已删除的正式文章编号仍保留，不重复使用。
 - `preview` 默认为 false；站点仍保留原分支的 `noindex` 预览策略。
 
 ## 链接与附件

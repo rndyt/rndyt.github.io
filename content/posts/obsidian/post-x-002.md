@@ -9,8 +9,8 @@ tags:
 preview: false
 kind: article
 category: AI 实践
-archiveId: X-009
-slug: post-x-009
+archiveId: X-002
+slug: post-x-002
 ---
 
 在上一篇文章最后，输入的文本已经被转换为了Token ID 序列。

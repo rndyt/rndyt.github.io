@@ -32,7 +32,7 @@ npm run dev
 
 ```yaml
 ---
-archiveId: X-008
+archiveId: X-001
 slug: your-next-post
 category: 工程文章
 author: rndyt

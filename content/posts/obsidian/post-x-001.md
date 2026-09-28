@@ -9,8 +9,8 @@ tags:
 preview: false
 kind: article
 category: AI 实践
-archiveId: X-008
-slug: post-x-008
+archiveId: X-001
+slug: post-x-001
 ---
 
 现代 Agent 的核心驱动力，始终来源于大语言模型，Harness 的核心，始终是围绕 LLM API 构建的一套控制循环。
