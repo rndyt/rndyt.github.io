@@ -135,4 +135,4 @@ playing
 
 # Token Embedding
 
-Token ID 的本质是词表中的索引编号，其并不包含任何的语义信息，因此
+Token ID 的本质是词表中的索引编号，其并不包含任何的语义信息，因此还需要 Embedding 层将离散的 Token ID 序列转换为可以包含语义信息的高维向量。
