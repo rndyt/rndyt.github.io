@@ -1,5 +1,5 @@
 ---
-title: 自顶向下的大语言模型基础介绍（一）——从 API 到模型
+title: 自顶向下的大语言模型基础介绍
 description: 现代 Agent 的核心驱动力，始终来源于大语言模型，Harness 的核心，始终是围绕 LLM API 构建的一套控制循环。
 date: 2026-09-25
 author: rndyt
@@ -132,3 +132,7 @@ playing
 ```text
 [40, 716, 1512, 287, 6243, 13]
 ```
+
+# Token Embedding
+
+Token ID 的本质是词表中的索引编号，其并不包含任何的语义信息，因此

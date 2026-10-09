@@ -1,6 +1,6 @@
 ---
 title: 自顶向下的大语言模型基础介绍（二）——模型如何产生内容
-description: 在上一篇文章最后，输入的文本已经被转换为了Token ID 序列。
+description: 在上一篇文章最后，输入的文本已经被转换为了Token ID 序列。接下来就需要将 Token
 date: 2026-09-10
 author: rndyt
 tags:
@@ -13,4 +13,4 @@ archiveId: X-002
 slug: post-x-002
 ---
 
-在上一篇文章最后，输入的文本已经被转换为了Token ID 序列。
+在上一篇文章最后，输入的文本已经被转换为了Token ID 序列。接下来就需要将 Token

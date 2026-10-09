@@ -1,18 +1,18 @@
 {
   "version": 1,
   "entries": {
-    "Agent/自顶向下的大语言模型基础介绍（一）.md": {
-      "archiveId": "X-001",
-      "slug": "post-x-001"
-    },
     "Agent/自顶向下的大语言模型基础介绍（二）.md": {
       "archiveId": "X-002",
       "slug": "post-x-002"
+    },
+    "Agent/自顶向下的大语言模型基础介绍.md": {
+      "archiveId": "X-001",
+      "slug": "post-x-001"
     }
   },
   "files": [
-    "obsidian/post-x-002.md",
-    "obsidian/post-x-001.md"
+    "obsidian/post-x-001.md",
+    "obsidian/post-x-002.md"
   ],
   "assets": [],
   "reservedIds": [
