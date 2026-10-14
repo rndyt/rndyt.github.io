@@ -69,5 +69,14 @@ npm run check:viewport
 开发服务器监听项目中的 Markdown 修改；Obsidian 原目录修改后需再运行 `npm run sync:blog`。
 云端构建读取已经提交的同步结果，不依赖本机路径。Astro 的页面、脚本、样式和附件均纳入 PWA 版本缓存。
 
-PersonelPage 的每分钟后台同步仍只服务它自己的发布副本。本次未修改其 LaunchAgent，
-也未给此分支新增定时推送；同步后正常提交、推送本分支即可触发配置好的部署流程。
+## 一键手动发布
+
+```sh
+npm run publish:blog
+# 指定其他 Blog 目录：
+npm run publish:blog -- "/path/to/ObsidianVault/Blog"
+```
+
+每小时 Codex 自动任务已停用。此命令按需同步、校验、提交并推送至 `fork/codex/rhine-blog`，由 GitHub Pages 构建部署；终端提供部署状态链接。没有内容变化时不创建提交。
+
+脚本要求当前为博客分支、暂存区为空，且无无关工作区改动或未推送提交。只提交博客同步目录；不会推送 origin，也不会自动合并远程更新。网络或校验失败后保留结果，再次运行可重试推送。源笔记不被修改，草稿过滤及稳定编号规则沿用上文。

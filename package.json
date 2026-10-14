@@ -16,7 +16,8 @@
     "format": "prettier --write src scripts package.json tsconfig.json",
     "preview": "astro preview --host 127.0.0.1",
     "sync:blog": "node scripts/sync-obsidian-blog.mjs",
-    "check:sync": "node --test scripts/check-obsidian-sync.mjs"
+    "check:sync": "node --test scripts/check-obsidian-sync.mjs",
+    "publish:blog": "node scripts/publish-blog.mjs"
   },
   "dependencies": {
     "@kitlangton/rolling-number": "0.4.1",

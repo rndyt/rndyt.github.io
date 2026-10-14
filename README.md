@@ -24,7 +24,7 @@ npm run dev
 ## 写文章
 
 文章现在来自 Obsidian 的 `~/Nutstore Files/ObsidianVault/Blog`，由 Astro 管理内容集合和静态页面。
-先执行 `npm run sync:blog`，再启动开发或构建。完整说明见 [Obsidian 同步](docs/OBSIDIAN_SYNC.md)。
+手动同步并发布执行 `npm run publish:blog`。本地开发先执行 `npm run sync:blog`，再启动开发或构建。完整说明见 [Obsidian 同步](docs/OBSIDIAN_SYNC.md)。
 请在 Obsidian 修改原文；`content/posts/obsidian/` 为同步结果，不要手工改写。
 历史七篇示例移至 `reference/blog-samples/`，不再发布。全部页面继续 `noindex`。
 
