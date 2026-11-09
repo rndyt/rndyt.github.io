@@ -147,7 +147,7 @@ Decode 阶段则负责后续 Token 的逐步生成。由于每一个新 Token �
 
 接下来，我们先介绍 Transformer Block 的内部结构，了解模型如何通过 Self-Attention 和前馈神经网络处理 Token 向量。
 
-# Transformer Block
+## Transformer Block
 
 Transformer Block 是 Transformer 神经网络中可重复堆叠的基本计算单元。一个现代 Decoder-only LLM 通常由多个 Transformer Block 组成，每一层接收上一层输出的隐藏状态，通过 Self-Attention 和前馈神经网络对其进行处理，并将更新后的隐藏状态传递给下一层。
 
