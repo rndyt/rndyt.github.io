@@ -1,7 +1,7 @@
 /* Keep the original scene, calibrated camera, motion and visual system. */
 .detail-content h2 { line-height: 1.4; font-size: 30px; letter-spacing: -.6px; }
 .detail-content .tab-panel { height: auto; min-height: 189px; overflow: visible; padding-bottom: 20px; }
-.detail-content .blog-prose { font-size: 16px; line-height: 1.95; color: #49483f; overflow-wrap: anywhere; }
+.detail-content .blog-prose { font-size: 16px; line-height: 1.75; color: #49483f; overflow-wrap: anywhere; }
 .detail-content .blog-prose p { font-size: inherit; text-align: left; margin: 16px 0; }
 .detail-content .blog-prose h1, .detail-content .blog-prose h2, .detail-content .blog-prose h3 { font-size: 22px; line-height: 1.5; color: #20221d; margin: 28px 0 14px; }
 .detail-content .blog-prose h3 { font-size: 19px; }

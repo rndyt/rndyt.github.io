@@ -1,10 +1,15 @@
 import { readdir, readFile } from 'node:fs/promises';
+import { readFileSync } from 'node:fs';
 import { basename } from 'node:path';
 import { parse } from 'yaml';
 import { Marked } from 'marked';
 import markedKatex from 'marked-katex-extension';
 import sanitize from 'sanitize-html';
 import { replayMarkdown } from './workflow-replay.mjs';
+
+// Ship reader styles with the document so an installed offline cache cannot
+// pair current article HTML with an older version of its typography.
+const readerStyles = readFileSync('public/blog-reader.css', 'utf8');
 
 export const escape = (value) => String(value).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 export function renderMarkdown(body) {
@@ -97,5 +102,5 @@ function readerBack(href) {
   return `<a class="reader-back" href="${href}" aria-label="返回档案" title="返回档案">← 返回档案</a>`;
 }
 function page(title, content, description = 'rndyt 的个人博客', mainClass = '') {
-  return `<!doctype html><html lang="zh-CN"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1"><meta name="robots" content="noindex, nofollow"><meta name="description" content="${escape(description)}"><title>${escape(title)} · rndyt</title><link rel="icon" href="/favicon.svg"><link rel="stylesheet" href="/math/katex.min.css"><link rel="stylesheet" href="/blog-reader.css"><link rel="stylesheet" href="/reader-transition.css"><script src="/reader-transition.js"></script></head><body><main class="${mainClass}">${content}</main><footer>rndyt · 个人博客 · 三维档案 <a href="https://github.com/LBEILC/RhineLabUI">界面基于 RhineLabUI</a></footer></body></html>`;
+  return `<!doctype html><html lang="zh-CN"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1"><meta name="robots" content="noindex, nofollow"><meta name="description" content="${escape(description)}"><title>${escape(title)} · rndyt</title><link rel="icon" href="/favicon.svg"><link rel="stylesheet" href="/math/katex.min.css"><style>${readerStyles}</style><link rel="stylesheet" href="/reader-transition.css"><script src="/reader-transition.js"></script></head><body><main class="${mainClass}">${content}</main><footer>rndyt · 个人博客 · 三维档案 <a href="https://github.com/LBEILC/RhineLabUI">界面基于 RhineLabUI</a></footer></body></html>`;
 }
