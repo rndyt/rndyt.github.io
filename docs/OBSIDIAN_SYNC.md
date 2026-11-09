@@ -77,6 +77,26 @@ npm run publish:blog
 npm run publish:blog -- "/path/to/ObsidianVault/Blog"
 ```
 
-每小时 Codex 自动任务已停用。此命令按需同步、校验、提交并推送至 `fork/codex/rhine-blog`，由 GitHub Pages 构建部署；终端提供部署状态链接。没有内容变化时不创建提交。
+此命令按需同步、校验、提交并推送至 `fork/codex/rhine-blog`，由 GitHub Pages 构建部署；终端提供部署状态链接。没有内容变化时不创建提交。
 
 脚本要求当前为博客分支、暂存区为空，且无无关工作区改动或未推送提交。只提交博客同步目录；不会推送 origin，也不会自动合并远程更新。网络或校验失败后保留结果，再次运行可重试推送。源笔记不被修改，草稿过滤及稳定编号规则沿用上文。
+
+## 本机自动发布
+
+macOS LaunchAgent `com.rndyt.obsidian-blog-sync` 每 60 秒运行
+`scripts/publish-obsidian-background.sh`。电脑需保持开机、用户登录且网络可用；推送后还需等待 GitHub Pages 构建。
+
+后台使用独立克隆 `~/Library/Application Support/rndyt-blog-publisher/rhine-site`，
+分支为 `codex/rhine-blog`，`fork` 指向 `https://github.com/rndyt/rndyt.github.io.git`。
+从本机 Obsidian 读取内容，复用上述 `publish:blog` 的校验与提交流程，不提交开发工作区的修改。
+脚本在干净状态下快进更新远程分支，依赖锁文件变化时重新安装依赖；并发执行由 PID 锁防止。
+
+任务配置位于 `~/Library/LaunchAgents/com.rndyt.obsidian-blog-sync.plist`；
+日志位于 `/tmp/rndyt-obsidian-blog-sync.log`。每小时 Codex 自动任务仍停用。
+旧的 `rndyt/site` 发布副本不再由此任务运行；实际线上入口为
+`https://rndyt.github.io/`，文章地址为 `/posts/<slug>/`。
+
+重建后台副本时，克隆上述仓库的 `codex/rhine-blog` 分支并将远程命名为 `fork`，
+将 LaunchAgent 的程序设置为 `/bin/zsh` 与后台副本内脚本的绝对路径，
+`StartInterval` 设置为 `60`，并提供含 Node/npm 的 `PATH`。可设置
+`OBSIDIAN_PUBLISH_REPO` 和 `OBSIDIAN_BLOG_DIR` 覆盖发布副本及源目录。

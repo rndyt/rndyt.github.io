@@ -128,3 +128,132 @@ playing
 # Token Embedding
 
 Token ID 的本质是词表中的索引编号，其并不包含任何的语义信息，因此还需要 Embedding 层将离散的 Token ID 序列转换为可以包含语义信息的高维向量。
+
+Token Embedding 的主流实现方式就是查表，在模型预训练阶段，会训练一个大小为（词表大小，嵌入维度）的参数矩阵，每一行就对应词表中一个 Token 的向量表示，这样我们就将一个整数序列转换为了一个二维矩阵。
+
+在实际实践中，为了提高 GPU 的计算效率和吞吐量，会将相互独立的多条文本组合为一个 Batch 进行计算，所以最终输出的会是一个三维张量。
+
+# Transformer
+
+经过 Token Embedding 后，输入的 Token ID 序列已经被转换为高维向量表示，接下来这些向量将进入 Transformer 网络进行计算。
+
+不过，在进一步介绍 Transformer 的内部结构之前，我们需要先了解大语言模型在实际推理时的运行方式。
+
+对于现代 Decoder-only LLM，一次完整的推理通常可以划分为两个阶段：**Prefill（预填充）和 Decode（解码生成）**，两者是同一个 Transformer 模型在不同推理阶段的两种计算方式。
+
+Prefill 阶段负责处理已经存在的输入上下文。由于用户提供的完整输入序列在推理开始时就已经确定，模型可以并行处理这些 Token，通过多层 Transformer Block 计算其隐藏状态，并将 Attention 中需要复用的 Key、Value 保存到 KV Cache 中。随后，模型利用最后一个有效位置的隐藏状态预测第一个输出 Token。
+
+Decode 阶段则负责后续 Token 的逐步生成。由于每一个新 Token 都依赖之前的上下文，因此模型通常每次处理一个新 Token，并通过 KV Cache 复用已有 Token 的计算结果，避免重复计算完整的历史序列。
+
+接下来，我们先介绍 Transformer Block 的内部结构，了解模型如何通过 Self-Attention 和前馈神经网络处理 Token 向量。
+
+# Transformer Block
+
+Transformer Block 是 Transformer 神经网络中可重复堆叠的基本计算单元。一个现代 Decoder-only LLM 通常由多个 Transformer Block 组成，每一层接收上一层输出的隐藏状态，通过 Self-Attention 和前馈神经网络对其进行处理，并将更新后的隐藏状态传递给下一层。
+
+经过 Token Embedding 后，我们已经得到一个形状为 $[B,L,D]$ 的三维张量，其中 $B$ 表示 Batch Size，$L$ 表示序列长度，$D$ 表示隐藏维度。这个张量也可以称为初始隐藏状态（Hidden States）。随着隐藏状态不断经过 Transformer Block，其向量表示也会不断更新，从而逐渐融合上下文信息。
+
+一个典型的现代 Transformer Block 主要包含归一化（Normalization）、自注意力机制（Self-Attention）、前馈神经网络（FFN）以及残差连接（Residual Connection）。
+
+### 归一化
+
+在进入 Self-Attention 之前，现代 LLM 通常会先对输入隐藏状态进行归一化处理。由于 Transformer Block 中的矩阵运算和残差连接可能不断改变隐藏向量的数值尺度，如果缺少适当的控制，就可能影响后续计算的数值稳定性。
+
+归一化的主要作用就是调整隐藏向量的数值尺度，使其保持在相对稳定的范围内，从而改善模型的训练稳定性。现代 LLM 常采用 RMSNorm 等方法进行处理。
+
+## 自注意力机制
+
+Self-Attention 的核心作用，是让序列中的每个 Token 根据当前上下文，从其他可以关注的 Token 中提取信息，并更新自身的向量表示。
+
+### QKV
+
+Self-Attention 首先会对输入隐藏状态进行三组线性投影，生成 Query、Key、Value 三种向量。
+
+$$  
+Q=XW_Q,\quad K=XW_K,\quad V=XW_V  
+$$
+
+这里的 $X$ 表示进入 Attention 线性投影的隐藏状态，$W_Q$、$W_K$、$W_V$ 则是模型训练得到的参数矩阵。
+
+三个向量分别承担不同的作用：
+
+| 名称       | 含义                         |
+| -------- | -------------------------- |
+| Query（Q） | 当前 Token 用于寻找相关信息的查询特征     |
+| Key（K）   | 当前 Token 用于被其他 Token 匹配的特征 |
+| Value（V） | 当前 Token 可以提供给其他 Token 的信息 |
+### 位置编码
+
+在计算 Attention 时，模型不仅需要判断 Token 之间的关联程度，还需要知道它们在序列中的位置关系。例如，“我喜欢苹果”和“苹果喜欢我”包含相同的 Token，但排列顺序不同，表达的含义也完全不同。因此，模型需要通过位置编码引入 Token 的位置信息。
+
+现代 LLM 通常采用 RoPE（Rotary Position Embedding，旋转位置编码）。它的核心思路是：**根据每个 Token 在序列中的位置，对其 Query 和 Key 向量进行不同角度的旋转。**
+
+由于旋转角度与 Token 的位置有关，当两个 Token 的 Query 和 Key 计算点积时，旋转角度之间的差异就能够反映它们的相对位置。
+
+这样，Attention 在计算 Token 之间的关联程度时，就能够同时考虑 Token 的内容信息和相对位置关系，而不只是比较它们的向量特征。
+
+### Attention Score
+
+得到 Q、K、V 后，模型就可以利用它们计算 Token 之间的关联程度，并根据关联程度聚合上下文信息。这一过程就是 Self-Attention 的核心计算。为了便于理解，我们先只考虑一组 Q、K、V 的情况，也就是一次独立的注意力计算。
+
+模型首先通过 Query 和 Key 的点积计算注意力分数，用于衡量当前 Token 与其他 Token 的匹配程度：
+
+$$  
+S=QK^T  
+$$
+
+对于包含 $L$ 个 Token 的序列，计算得到的注意力分数矩阵大小为 $L\times L$。其中，每一行代表一个发起查询的 Token，每一列代表一个被查询的 Token，矩阵中的数值则表示对应 Token 之间的匹配分数。
+
+不过，当 Query 和 Key 的维度较大时，点积结果的数值幅度也可能随之增大，从而影响后续 Softmax 的计算。因此，模型通常还会将点积结果除以 Key 向量维度的平方根：
+
+$$  
+S=\frac{QK^T}{\sqrt{d_k}}  
+$$
+
+这种计算方式称为 Scaled Dot-Product Attention（缩放点积注意力）。
+
+以上介绍了通过一组 Q、K、V 完成 Self-Attention 计算的过程，但自然语言中的 Token 往往存在多种不同的关联关系。如果只进行一次注意力计算，模型能够提取的信息模式可能受到限制。因此，Transformer 引入了 Multi-Head Attention（多头注意力机制），其核心思路是：**使用多组不同的 Q、K、V 投影，并行执行多次注意力计算，每一组独立的注意力计算就称为一个 Attention Head（注意力头）。** 由于不同 Attention Head 拥有各自的投影参数，它们可以从不同的特征子空间学习 Token 之间的关联关系。例如，一些 Head 可能更关注相邻 Token 之间的联系，而另一些则可能更关注距离较远的上下文信息。这些关注模式并非人为指定，而是在模型训练过程中逐渐形成的。
+
+在实际计算中，模型并不需要为每个 Attention Head 分别执行一次线性投影，而是可以先通过大型投影矩阵，一次性生成所有 Head 所需的 Q、K、V 向量。
+
+例如，假设隐藏向量的维度为 4096，模型使用 32 个 Attention Head。那么，模型可以先通过线性投影生成 4096 维的 Q、K、V 向量，再将每个向量划分为 32 组，每组包含 128 个维度。这样，每个 Head 都能获得属于自己的一组 Q、K、V，并独立完成前面介绍的 Attention 计算。由于不同 Head 的投影参数不同，它们能够从不同的特征空间提取上下文信息。最后，模型将 32 个 Head 的输出重新拼接为一个 4096 维向量，再经过一次线性变换（这里用到的变换矩阵也是通过训练学习出来的），得到 Multi-Head Attention 的最终输出。
+
+经过 Attention Score 计算后可以得到一组匹配分数，模型还需要通过 Softmax，将这些分数转换为总和为 1 的注意力权重。
+
+$$  
+A=\operatorname{softmax}(S+M)  
+$$
+
+其中 $M$ 表示 Attention Mask。其作用主要是限制 Attention 的计算范围，后续我们会在 Prefill 部分进行介绍。
+
+接下来，模型根据这些权重对 Value 向量进行加权求和，就得到了 Self-Attention 的核心公式：
+
+$$
+ \operatorname{Attention}(Q,K,V) = \operatorname{softmax}\left( \frac{QK^T}{\sqrt{d_k}}+M \right)V
+$$
+
+对于单个 Token 向量而言，其经过上面的注意力公式计算后输出的结果就是一个融合了更多上下文信息的同形状的向量。
+
+## FFN
+
+经过 Self-Attention 后，每个 Token 的隐藏状态已经融合了来自上下文的信息。但模型不仅需要获取这些信息，还需要进一步学习其中的特征组合与复杂关系。因此，Transformer Block 在 Self-Attention 之后，还会通过 **FFN（Feed-Forward Network，前馈神经网络）** 对隐藏状态进行进一步处理。
+
+与 Self-Attention 不同，FFN 不会直接在不同 Token 之间交换信息，而是对每个 Token 的隐藏向量分别进行计算。其通常由线性变换和非线性激活函数组成。线性变换负责对已有特征进行加权组合，而非线性激活函数则使网络能够学习线性变换难以表达的复杂关系。通过多层变换，FFN 可以对 Self-Attention 聚合后的信息进行进一步加工，形成更加丰富的特征表示。
+
+## Residual Connection
+
+经过 Self-Attention 和 FFN 的计算后，模型会得到新的特征表示。但如果直接使用这些结果替换原有的隐藏状态，就可能使已有信息在多层变换中难以保留，同时增加深层网络的训练难度。
+
+为此，Transformer 引入了 Residual Connection（残差连接），其核心思路是：**不直接使用模块的计算结果替换输入，而是将计算结果与原始输入相加，使模块能够在已有表示的基础上进行更新。**
+
+对于采用 Pre-Norm 结构的 Transformer Block，两次残差连接可以表示为：
+
+$$  
+H=X+\operatorname{Attention}(\operatorname{Norm}(X))  \\
+\\  
+Y=H+\operatorname{FFN}(\operatorname{Norm}(H))  
+$$
+
+其中，$X$ 是当前 Transformer Block 的输入隐藏状态，$H$ 是经过 Self-Attention 和第一次残差连接后的隐藏状态，$Y$ 则是当前 Transformer Block 的最终输出。
+
+至此，一个完整的 Transformer Block 就完成了计算。它通过 Self-Attention 聚合上下文信息，通过 FFN 加工特征，再结合归一化和残差连接，不断更新每个 Token 的隐藏状态，并将结果传递给下一层 Transformer Block。多层的 Transformer Block 堆叠起来就形成了完整的 Transformer 网络。
