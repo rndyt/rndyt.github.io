@@ -53,8 +53,22 @@ self.addEventListener("fetch", event => {
   if (!allowed.has(key)) return;
   event.respondWith((async () => {
     const cache = await caches.open(CACHE);
-    // HTML, hashed bundles and stable model URLs come from the same release.
-    // A new release stays waiting until the user chooses to restart or exits.
+    // Published articles can change independently of the installed application.
+    // Revalidate online, while retaining the last successful article offline.
+    const posts = new URL('posts/', self.registration.scope).href;
+    if (key.startsWith(posts) && key.endsWith('/index.html')) {
+      try {
+        const response = await fetch(new Request(event.request, { cache: 'no-cache' }));
+        if (response.ok) event.waitUntil(cache.put(key, response.clone()).catch(() => {}));
+        return response;
+      } catch (error) {
+        const cached = await cache.match(key);
+        if (cached) return cached;
+        throw error;
+      }
+    }
+    // The application shell and its assets remain on the same release until
+    // the user chooses to restart or exits.
     const cached = await cache.match(key);
     return cached ?? fetch(event.request);
   })());
