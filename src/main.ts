@@ -531,6 +531,7 @@ function setTab(tab: string, sound = true) {
     b.setAttribute("tabindex", active ? "0" : "-1");
   });
   const r = records[selected];
+  const tocHeadings = r.headings.filter(h => h.depth === 1);
   const tabButton = $<HTMLButtonElement>(`[data-tab="${tab}"]`);
   const indicator = $(".tab-indicator");
   indicator.style.transition = sound ? "" : "none";
@@ -540,7 +541,7 @@ function setTab(tab: string, sound = true) {
     tab === "overview"
       ? overview()
       : tab === "notes"
-        ? `<div class="panel-label">CONTENTS / 本文目录</div>${r.headings.length ? `<nav class="blog-toc" aria-label="本文目录">${r.headings.map(h => `<button data-heading="${h.id}">${h.text}</button>`).join("")}</nav>` : '<p>这是一篇短文，可直接在正文页签阅读。</p>'}`
+        ? `<div class="panel-label">CONTENTS / 本文目录</div>${tocHeadings.length ? `<nav class="blog-toc" aria-label="本文目录">${tocHeadings.map(h => `<button data-heading="${h.id}">${h.text}</button>`).join("")}</nav>` : '<p>这是一篇短文，可直接在正文页签阅读。</p>'}`
         : `<div class="panel-label">RELATED / 同类文章</div>${records.map((post, index) => ({ post, index })).filter(({post}) => post.id !== r.id && post.category === r.category).map(({post,index}) => `<button class="blog-related" data-result="${index}"><span>${escapeHtml(post.title)}</span><small>${escapeHtml(post.date)} ↗</small></button>`).join("") || '<p>当前分类暂无其他文章。</p>'}`;
   $("#tab-panel").scrollTop = 0;
   documentDecryption.refresh();

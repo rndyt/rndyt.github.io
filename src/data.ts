@@ -18,7 +18,7 @@ export interface ArchiveRecord {
   tags: string[];
   readingMinutes: number;
   preview: boolean;
-  headings: { id: string; text: string }[];
+  headings: { id: string; text: string; depth: number }[];
 }
 
 export const records: ArchiveRecord[] = content.records;

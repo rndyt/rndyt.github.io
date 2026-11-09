@@ -21,3 +21,6 @@
   .mobile-toc summary:focus-visible{outline:2px solid #785a31;outline-offset:4px}
   .mobile-toc .toc{border:0;padding:0 0 16px}
 }
+
+.prose .katex-display{max-width:100%;overflow-x:auto;overflow-y:hidden;padding:8px 0}
+.prose .katex{font-size:1.05em}

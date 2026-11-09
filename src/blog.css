@@ -17,3 +17,6 @@
 .blog-related small { display: block; color: #746c5e; font-size: 12px; margin-top: 6px; }
 [data-layout="desktop"] .detail-content { top: 245px; max-height: calc(100% - 340px); }
 @media (prefers-reduced-motion: reduce) { .blog-prose * { scroll-behavior: auto; } }
+
+.blog-prose .katex-display{max-width:100%;overflow-x:auto;overflow-y:hidden;padding:8px 0}
+.blog-prose .katex{font-size:1.05em}

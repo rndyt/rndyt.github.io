@@ -2,27 +2,47 @@ import { readdir, readFile } from 'node:fs/promises';
 import { basename } from 'node:path';
 import { parse } from 'yaml';
 import { Marked } from 'marked';
+import markedKatex from 'marked-katex-extension';
 import sanitize from 'sanitize-html';
 import { replayMarkdown } from './workflow-replay.mjs';
 
 export const escape = (value) => String(value).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 export function renderMarkdown(body) {
   const headings = [];
+  const math = [];
+  const extension = markedKatex({ nonStandard: true, throwOnError: false, trust: false, strict: false });
+  for (const rule of extension.extensions) {
+    if (rule.name === 'blockKatex') rule.tokenizer = function(src) {
+      const match = /^(\${2})[\t ]*\n([\s\S]+?)\n\1[\t ]*(?:\n|$)/.exec(src);
+      if (match) return { type: 'blockKatex', raw: match[0], text: match[2].trim(), displayMode: true };
+    };
+    const render = rule.renderer;
+    rule.renderer = token => {
+      if (token.displayMode && /\\\\/.test(token.text) && !/\\begin\s*\{/.test(token.text)) {
+        token = { ...token, text: `\\begin{aligned}${token.text}\\end{aligned}` };
+      }
+      // Only trusted KaTeX output bypasses the Markdown HTML sanitizer. Keep
+      // arbitrary source HTML under the original, restrictive allowlist.
+      const index = math.push(render(token)) - 1;
+      return `<span data-rendered-math="${index}"></span>`;
+    };
+  }
   const markdown = new Marked({ renderer: {
     heading({ tokens, depth }) {
       const html = this.parser.parseInline(tokens);
       const text = sanitize(html, { allowedTags: [], allowedAttributes: {} });
       const id = `section-${headings.length + 1}`;
-      headings.push({ id, text });
+      headings.push({ id, text, depth });
       return `<h${depth} id="${id}">${html}</h${depth}>`;
     }
   }});
+  markdown.use(extension);
   const bodyHtml = sanitize(markdown.parse(body), {
     allowedTags: [...sanitize.defaults.allowedTags, 'img'],
-    allowedAttributes: { ...sanitize.defaults.allowedAttributes, '*': ['id'], img: ['src', 'alt', 'title', 'width', 'height'], code: ['class'] },
+    allowedAttributes: { ...sanitize.defaults.allowedAttributes, '*': ['id'], span: ['data-rendered-math'], img: ['src', 'alt', 'title', 'width', 'height'], code: ['class'] },
     allowedSchemes: ['http', 'https', 'mailto'],
     allowProtocolRelative: false,
-  });
+  }).replace(/<span data-rendered-math="(\d+)"><\/span>/g, (_match, index) => math[Number(index)] ?? '');
   return { bodyHtml, headings };
 }
 export async function readPosts(directory = new URL('../content/posts/', import.meta.url)) {
@@ -64,9 +84,10 @@ export async function readPosts(directory = new URL('../content/posts/', import.
 }
 export function readerPage(record, all) {
   const related = all.filter(item => item.category === record.category && item.id !== record.id);
-  const tocLinks = record.headings.map(h => `<a href="#${h.id}">${h.text}</a>`).join('');
-  const content = record ? `<div class="reader-column"><nav class="reader-topbar" aria-label="文章导航">${readerBack(`/?post=${record.slug}`)}</nav><header><div class="eyebrow">${escape(record.category)} / ${record.id}</div><h1>${escape(record.title)}</h1><p class="meta">${escape(record.lead)} · ${escape(record.date)} · ${record.readingMinutes} 分钟阅读</p><div class="tags">${record.tags.map(tag => `<span>#${escape(tag)}</span>`).join(' ')}</div></header>${record.preview ? '<aside class="notice">示例内容 · 尚未替换为真实文章或项目资料。</aside>' : ''}${record.headings.length ? `<details class="mobile-toc"><summary>本文目录</summary><nav class="toc" aria-label="本文目录">${tocLinks}</nav></details>` : ''}<article class="prose">${record.bodyHtml}</article>${related.length ? `<section class="related"><h2>同类文章</h2>${related.map(post => `<a href="${post.source}">${escape(post.title)} ↗</a>`).join('')}</section>` : ''}</div>${record.headings.length ? `<aside class="reader-sidebar"><nav class="toc" aria-label="本文目录"><span class="toc-label">本文目录</span>${tocLinks}</nav></aside>` : ''}` : '';
-  return page(record.title, content, record.abstract, record.headings.length ? "reader-layout" : "");
+  const tocHeadings = record.headings.filter(h => h.depth === 1);
+  const tocLinks = tocHeadings.map(h => `<a href="#${h.id}">${h.text}</a>`).join('');
+  const content = record ? `<div class="reader-column"><nav class="reader-topbar" aria-label="文章导航">${readerBack(`/?post=${record.slug}`)}</nav><header><div class="eyebrow">${escape(record.category)} / ${record.id}</div><h1>${escape(record.title)}</h1><p class="meta">${escape(record.lead)} · ${escape(record.date)} · ${record.readingMinutes} 分钟阅读</p><div class="tags">${record.tags.map(tag => `<span>#${escape(tag)}</span>`).join(' ')}</div></header>${record.preview ? '<aside class="notice">示例内容 · 尚未替换为真实文章或项目资料。</aside>' : ''}${tocHeadings.length ? `<details class="mobile-toc"><summary>本文目录</summary><nav class="toc" aria-label="本文目录">${tocLinks}</nav></details>` : ''}<article class="prose">${record.bodyHtml}</article>${related.length ? `<section class="related"><h2>同类文章</h2>${related.map(post => `<a href="${post.source}">${escape(post.title)} ↗</a>`).join('')}</section>` : ''}</div>${tocHeadings.length ? `<aside class="reader-sidebar"><nav class="toc" aria-label="本文目录"><span class="toc-label">本文目录</span>${tocLinks}</nav></aside>` : ''}` : '';
+  return page(record.title, content, record.abstract, tocHeadings.length ? "reader-layout" : "");
 }
 export function indexPage(records, categories) {
   const sorted = [...records].sort((a,b) => b.date.localeCompare(a.date));
@@ -76,5 +97,5 @@ function readerBack(href) {
   return `<a class="reader-back" href="${href}" aria-label="返回档案" title="返回档案">← 返回档案</a>`;
 }
 function page(title, content, description = 'rndyt 的个人博客', mainClass = '') {
-  return `<!doctype html><html lang="zh-CN"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1"><meta name="robots" content="noindex, nofollow"><meta name="description" content="${escape(description)}"><title>${escape(title)} · rndyt</title><link rel="icon" href="/favicon.svg"><link rel="stylesheet" href="/blog-reader.css"><link rel="stylesheet" href="/reader-transition.css"><script src="/reader-transition.js"></script></head><body><main class="${mainClass}">${content}</main><footer>rndyt · 个人博客 · 三维档案 <a href="https://github.com/LBEILC/RhineLabUI">界面基于 RhineLabUI</a></footer></body></html>`;
+  return `<!doctype html><html lang="zh-CN"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1"><meta name="robots" content="noindex, nofollow"><meta name="description" content="${escape(description)}"><title>${escape(title)} · rndyt</title><link rel="icon" href="/favicon.svg"><link rel="stylesheet" href="/math/katex.min.css"><link rel="stylesheet" href="/blog-reader.css"><link rel="stylesheet" href="/reader-transition.css"><script src="/reader-transition.js"></script></head><body><main class="${mainClass}">${content}</main><footer>rndyt · 个人博客 · 三维档案 <a href="https://github.com/LBEILC/RhineLabUI">界面基于 RhineLabUI</a></footer></body></html>`;
 }
