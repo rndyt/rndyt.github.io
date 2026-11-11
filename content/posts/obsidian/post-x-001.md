@@ -145,15 +145,9 @@ Token Embedding 的主流实现方式就是查表，在模型预训练阶段，�
 
 经过 Token Embedding 后，输入的 Token ID 序列已经被转换为高维向量表示，接下来这些向量将进入 Transformer 网络进行计算。
 
-不过，在进一步介绍 Transformer 的内部结构之前，我们需要先了解大语言模型在实际推理时的运行方式。
+不过，在进一步介绍 Transformer 的内部结构之前，我们需要先了解大语言模型在实际推理时的运行方式。对于现代 Decoder-only LLM，一次完整的推理通常可以划分为两个阶段：**Prefill（预填充）和 Decode（解码生成）**，两者是同一个 Transformer 模型在不同推理阶段的两种计算方式。
 
-对于现代 Decoder-only LLM，一次完整的推理通常可以划分为两个阶段：**Prefill（预填充）和 Decode（解码生成）**，两者是同一个 Transformer 模型在不同推理阶段的两种计算方式。
-
-Prefill 阶段负责处理已经存在的输入上下文。由于用户提供的完整输入序列在推理开始时就已经确定，模型可以并行处理这些 Token，通过多层 Transformer Block 计算其隐藏状态，并将 Attention 中需要复用的 Key、Value 保存到 KV Cache 中。随后，模型利用最后一个有效位置的隐藏状态预测第一个输出 Token。
-
-Decode 阶段则负责后续 Token 的逐步生成。由于每一个新 Token 都依赖之前的上下文，因此模型通常每次处理一个新 Token，并通过 KV Cache 复用已有 Token 的计算结果，避免重复计算完整的历史序列。
-
-接下来，我们先介绍 Transformer Block 的内部结构，了解模型如何通过 Self-Attention 和前馈神经网络处理 Token 向量，再讨论 Prefill 和 Decode 的区别。
+接下来，我们会先介绍 Transformer Block 的内部结构，了解模型如何通过 Self-Attention 和前馈神经网络处理 Token 向量，再讨论 Prefill 和 Decode 的区别。
 
 ## Transformer Block
 
