@@ -220,10 +220,10 @@ $$
 
 例如，假设隐藏向量的维度为 4096，模型使用 32 个 Attention Head。那么，模型可以先通过线性投影生成 4096 维的 Q、K、V 向量，再将每个向量划分为 32 组，每组包含 128 个维度。这样，每个 Head 都能获得属于自己的一组 Q、K、V，并独立完成前面介绍的 Attention 计算。由于不同 Head 的投影参数不同，它们能够从不同的特征空间提取上下文信息。最后，模型将 32 个 Head 的输出重新拼接为一个 4096 维向量，再经过一次线性变换（这里用到的变换矩阵也是通过训练学习出来的），得到 Multi-Head Attention 的最终输出。
 
-经过 Attention Score 计算后每个 Token得到的是一组与其他 Token 的匹配分数，模型还需要通过 Softmax，将这些分数转换为总和为 1 的注意力权重。
+经过 Attention Score 计算后每个 Token得到的是一组与其他 Token 的匹配分数，模型还需要通过 Softmax，将这些分数转换为总和为 1 的注意力权重，Softmax 会保留原始数值之间的大小顺序，同时通过指数运算，使较大的数值获得更高的权重。
 
 $$  
-A=\operatorname{softmax}(S+M)  
+A=\operatorname{softmax}(S+M)  \[ P_i=\frac{e^{z_i}}{\sum_j e^{z_j}} \]
 $$
 
 其中 $M$ 表示 Attention Mask。其作用主要是限制 Attention 的计算范围，后续我们会在 Prefill 部分进行介绍。
