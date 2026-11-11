@@ -310,7 +310,11 @@ $$
 
 # Prefill & Decode
 
-Prefill 和 Decode 是模型在实际推理过程中的两个不同计算阶段。
+至此，我们已经了解了模型如何通过 Transformer 计算隐藏状态，再经过 LM Head 和 Token Sampling 预测下一个 Token。
+
+不过，一次 Token 预测只能产生一个新的 Token，而一条完整的回答通常需要生成多个 Token。如果每次生成新 Token 后，都重新处理整个历史序列，就会产生大量重复计算。
+
+因此，现代 Decoder-only LLM 通常将实际推理过程划分为 Prefill（预填充）和 Decode（解码生成）两个阶段，并通过 KV Cache 机制复用历史计算结果，从而提高自回归生成的效率。
 
 Prefill 阶段负责处理已经存在的输入上下文。由于用户提供的完整输入序列在推理开始时就已经确定，模型可以并行处理这些 Token，通过多层 Transformer Block 计算其隐藏状态，并将 Attention 中需要复用的 Key、Value 保存到 KV Cache 中。随后，模型利用最后一个有效位置的隐藏状态预测第一个输出 Token。
 
