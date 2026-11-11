@@ -153,7 +153,7 @@ Prefill 阶段负责处理已经存在的输入上下文。由于用户提供的
 
 Decode 阶段则负责后续 Token 的逐步生成。由于每一个新 Token 都依赖之前的上下文，因此模型通常每次处理一个新 Token，并通过 KV Cache 复用已有 Token 的计算结果，避免重复计算完整的历史序列。
 
-接下来，我们先介绍 Transformer Block 的内部结构，了解模型如何通过 Self-Attention 和前馈神经网络处理 Token 向量。
+接下来，我们先介绍 Transformer Block 的内部结构，了解模型如何通过 Self-Attention 和前馈神经网络处理 Token 向量，再讨论 Prefill 和 Decode 的区别。
 
 ## Transformer Block
 
