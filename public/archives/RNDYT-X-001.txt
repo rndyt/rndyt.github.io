@@ -258,7 +258,7 @@ $$
 
 实际上，由于因果掩码保证了每个 Token 的隐藏状态只能依赖当前及之前的 Token，因此后续生成的新 Token 不会改变历史 Token已经计算得到的隐藏状态。也就是说，**历史 Token 的计算结果可以被复用，而不需要在每一轮生成时重新计算。** 
 
-基于这一特点，现代 LLM 通常采用 **KV Cache** 机制，将历史 Token 在各层 Attention 中计算得到的 Key 和 Value 保存起来，供后续生成过程使用。之所以只缓存 Key 和 Value，而不缓存 Query，是因为在 Decode 阶段，模型只需要计算新加入 Token 的 Query，并将其与历史 Token 的 Key 进行匹配，再根据注意力权重对对应的 Value 进行加权求和。历史 Token 的 Query 不会直接参与当前 Token 的注意力计算，因此通常没有必要缓存。
+基于这一特点，现代 LLM 通常采用 **KV Cache** 机制，将历史 Token 在各层 Attention 中计算得到的 Key 和 Value 保存起来，供后续生成过程使用。之所以只缓存 Key 和 Value，而不缓存 Query，是因为模型只需要计算新加入 Token 的 Query，并将其与历史 Token 的 Key 进行匹配，再对 Value 进行加权求和。历史 Token 的 Query 不会直接参与当前 Token 的注意力计算，因此通常没有必要缓存。
 
 需要注意的是，KV Cache 保存的并不是整个序列的最终隐藏状态，而是每个 Transformer Block 中 Attention 所需的 Key 和 Value。由于不同层具有各自的投影参数，因此每一层都需要维护相应的 KV Cache。
 
