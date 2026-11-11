@@ -298,7 +298,6 @@ $$
 
 完成 Token 选择后，模型就得到了新的 Token ID，并将其用于后续 Decode 计算，持续生成后面的内容。
 
-
 # KV Cache
 
 对于 Decoder-only LLM，生成过程是自回归的，即每生成一个新 Token，都会将新 Token 加入上下文并继续预测下一个 Token。一种直观的实现方式，是每次生成新 Token 后，都将完整的 Token 序列重新输入 Transformer 进行计算。但随着生成过程不断进行，如果每次都重新计算整个序列，会产生大量的重复计算。
