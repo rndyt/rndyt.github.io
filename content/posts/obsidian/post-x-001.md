@@ -265,3 +265,5 @@ $$
 其中，$X$ 是当前 Transformer Block 的输入隐藏状态，$H$ 是经过 Self-Attention 和第一次残差连接后的隐藏状态，$Y$ 则是当前 Transformer Block 的最终输出。
 
 至此，一个完整的 Transformer Block 就完成了计算。它通过 Self-Attention 聚合上下文信息，通过 FFN 加工特征，再结合归一化和残差连接，不断更新每个 Token 的隐藏状态，并将结果传递给下一层 Transformer Block。多层的 Transformer Block 堆叠起来就形成了完整的 Transformer 网络。
+
+# Prefill & Decode
