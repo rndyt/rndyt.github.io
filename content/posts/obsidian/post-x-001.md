@@ -261,23 +261,14 @@ $$
 至此，一个完整的 Transformer Block 就完成了计算。它通过 Self-Attention 聚合上下文信息，通过 FFN 加工特征，再结合归一化和残差连接，不断更新每个 Token 的隐藏状态，并将结果传递给下一层 Transformer Block。多层的 Transformer Block 堆叠起来就形成了完整的 Transformer 网络。
 
 # KV Cache
-在前面的 Self-Attention 中，我们介绍过模型会通过 Query、Key 和 Value 计算 Token 之间的关联，并根据注意力权重聚合上下文信息。对于 Decoder-only LLM，生成过程是自回归的，即每生成一个新 Token，都需要根据已有上下文继续预测下一个 Token。
 
-一种直观的实现方式，是每次生成新 Token 后，都将完整的 Token 序列重新输入 Transformer 进行计算。但随着生成过程不断进行，历史 Token 的数量也会越来越多，如果每次都重新计算整个序列，就会产生大量重复计算。
+对于 Decoder-only LLM，生成过程是自回归的，即每生成一个新 Token，都会将新 Token 加入上下文并继续预测下一个 Token。一种直观的实现方式，是每次生成新 Token 后，都将完整的 Token 序列重新输入 Transformer 进行计算。但随着生成过程不断进行，如果每次都重新计算整个序列，会产生大量的重复计算。
 
-实际上，由于因果掩码保证了每个 Token 的隐藏状态只能依赖当前及之前的 Token，因此后续生成的新 Token 不会改变历史位置已经计算得到的隐藏状态。也就是说，**历史 Token 的计算结果可以被复用，而不需要在每一轮生成时重新计算。**
+实际上，由于因果掩码保证了每个 Token 的隐藏状态只能依赖当前及之前的 Token，因此后续生成的新 Token 不会改变历史 Token已经计算得到的隐藏状态。也就是说，**历史 Token 的计算结果可以被复用，而不需要在每一轮生成时重新计算。** 
 
-基于这一特点，现代 LLM 通常采用 **KV Cache（Key-Value Cache）** 机制，将历史 Token 在各层 Attention 中计算得到的 Key 和 Value 保存起来，供后续生成过程使用。
-
-之所以只缓存 Key 和 Value，而不缓存 Query，是因为在 Decode 阶段，模型只需要计算当前 Token 的 Query，并将其与历史 Token 的 Key 进行匹配，再根据注意力权重对对应的 Value 进行加权求和。历史 Token 的 Query 不会直接参与当前 Token 的注意力计算，因此通常没有必要缓存。
-
-在 Prefill 阶段，模型并行处理已有的输入序列，并将各层计算得到的 Key 和 Value 保存到 KV Cache 中。进入 Decode 阶段后，模型通常每次只处理一个新 Token，计算其 Q、K、V，并利用当前 Query 与缓存中的历史 Key 以及当前 Key 完成 Attention 计算。随后，当前 Token 的 Key 和 Value 也会被加入缓存，以供下一轮生成使用。
+基于这一特点，现代 LLM 通常采用 **KV Cache** 机制，将历史 Token 在各层 Attention 中计算得到的 Key 和 Value 保存起来，供后续生成过程使用。之所以只缓存 Key 和 Value，而不缓存 Query，是因为在 Decode 阶段，模型只需要计算新加入 Token 的 Query，并将其与历史 Token 的 Key 进行匹配，再根据注意力权重对对应的 Value 进行加权求和。历史 Token 的 Query 不会直接参与当前 Token 的注意力计算，因此通常没有必要缓存。
 
 需要注意的是，KV Cache 保存的并不是整个序列的最终隐藏状态，而是每个 Transformer Block 中 Attention 所需的 Key 和 Value。由于不同层具有各自的投影参数，因此每一层都需要维护相应的 KV Cache。
-
-通过这一机制，Decode 阶段不再需要重复执行历史 Token 的完整前向计算，而只需要计算新 Token，并通过历史缓存获取上下文信息。
-
-不过，KV Cache 并没有消除长上下文带来的全部开销。随着序列长度不断增加，缓存占用的显存也会持续增长，而当前 Token 的 Attention 仍然需要访问历史 Key 和 Value。因此，KV Cache 实际上是通过增加缓存空间的方式，减少重复计算，从而提高自回归生成的效率。
 
 # Prefill & Decode
 
