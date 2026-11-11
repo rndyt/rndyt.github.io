@@ -264,13 +264,19 @@ $$
 
 # Prefill & Decode
 
-Prefill 和 Decode 是模型在实际推理过程中的两个不同计算阶段
+Prefill 和 Decode 是模型在实际推理过程中的两个不同计算阶段。
 
 Prefill 阶段负责处理已经存在的输入上下文。由于用户提供的完整输入序列在推理开始时就已经确定，模型可以并行处理这些 Token，通过多层 Transformer Block 计算其隐藏状态，并将 Attention 中需要复用的 Key、Value 保存到 KV Cache 中。随后，模型利用最后一个有效位置的隐藏状态预测第一个输出 Token。
 
 需要注意的是在 Prefill 阶段依然会使用因果掩码，使每个 Token 只能关注自己及之前的 Token。因此，即使整个输入序列同时参与计算，各个位置得到的隐藏状态仍然只依赖其已有的上下文。这样才能确保历史 Token的隐藏状态是稳定的，不会因为后续 token 发生变化，以实现 KV Cache 在后续 Decode 阶段的持续复用。
 
-Prefill 完成后，模型已经得到了第一个新生成的 Token。但一条完整的回答通常由多个 Token 组成，因此模型还需要继续预测后续内容，这一过程就是 Decode。Decode 阶段则负责后续 Token 的逐步生成。由于每一个新 Token 都依赖之前的上下文，因此模型通常每次处理一个新 Token，并通过 KV Cache 复用已有 Token 的计算结果，避免重复计算完整的历史序列。
+Prefill 完成后，模型已经根据输入上下文预测出了第一个输出 Token。但由于 Decoder-only LLM 采用自回归生成方式，一条完整的回答需要通过多轮预测逐步生成，因此模型还需要继续执行 Decode 阶段。
+
+在 Decode 阶段，模型会将上一轮刚刚生成的 Token 作为当前输入，继续通过 Transformer 计算其隐藏状态，并预测下一个 Token。这个过程与 Prefill 不同，模型不再需要重新处理完整的历史序列，而是通过 KV Cache 复用此前已经计算得到的 Key 和 Value。
+
+具体来说，当前 Token 在每一层 Attention 中都会生成新的 Query、Key 和 Value。其中，Query 会与缓存的历史 Key 以及当前 Key 计算注意力分数，再根据对应的 Value 聚合上下文信息。与此同时，当前 Token 的 Key 和 Value 也会被加入 KV Cache，供后续生成使用。
+
+这样，模型每轮只需要处理一个新的 Token，就能够利用已有的上下文信息继续预测。随着新 Token 不断生成，这一过程也会持续重复，直到满足相应的停止条件。
 
 # LM Head
 
