@@ -363,15 +363,9 @@ Prefill 完成后，模型已经根据输入上下文预测出了第一个输出
 
 在 Decode 阶段，模型会将上一轮刚刚生成的 Token 作为当前输入，继续通过 Transformer 计算其隐藏状态，并预测下一个 Token。与 Prefill 不同，此时模型不再需要重新处理完整的历史序列，而是通过 KV Cache 获取此前已经计算得到的上下文信息。
 
-具体来说，当前 Token 在每一层 Attention 中都会生成新的 Query、Key 和 Value。其中，当前 Query 会与缓存中的历史 Key 以及当前 Key 计算注意力分数，再根据对应的 Value 进行加权求和，从而获得融合历史上下文信息的当前表示。
+具体来说，当前 Token 在每一层 Attention 中都会生成新的 Query、Key 和 Value，与 KV Cache 中保存的历史 Key、Value 一起进行 Attention 计算，从而获得融合历史上下文信息的当前表示。与此同时，当前 Token 新计算得到的 Key 和 Value 也会被加入 KV Cache，以供后续生成使用。
 
-与此同时，当前 Token 新计算得到的 Key 和 Value 也会被加入 KV Cache，以供后续生成使用。由于历史位置的 Key 和 Value 已经缓存，模型每轮只需要对当前 Token 执行新的前向计算，就能够利用此前的上下文继续预测。
-
-经过多层 Transformer Block 后，模型会将当前 Token 的最终隐藏状态输入 LM Head，并通过 Token Sampling 选择下一个 Token。随后，这个新生成的 Token 又会成为下一轮 Decode 的输入，整个过程不断重复。
-
-需要注意的是，在使用 KV Cache 的标准单 Token Decode 中，当前 Token 能够访问的 Key 和 Value 只来自历史 Token 和自身，因此通常不需要显式构建完整的 Causal Mask。虽然计算方式与 Prefill 不同，但仍然遵循相同的因果约束。
-
-最终，Decode 会持续执行，直到满足相应的停止条件，例如生成结束标记（EOS Token）、达到最大输出长度，或者触发预设的停止规则。
+经过多层 Transformer Block 后，模型会将当前 Token 的最终隐藏状态输入 LM Head，并通过 Token Sampling 选择下一个 Token。随后，这个新生成的 Token 又会成为下一轮 Decode 的输入，整个过程不断重复，直到满足相应的停止条件，例如生成结束标记（EOS Token）、达到最大输出长度，或者触发预设的停止规则。
 
 # Detokenization
 
