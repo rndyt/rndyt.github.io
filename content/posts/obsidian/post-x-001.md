@@ -260,6 +260,9 @@ $$
 
 至此，一个完整的 Transformer Block 就完成了计算。它通过 Self-Attention 聚合上下文信息，通过 FFN 加工特征，再结合归一化和残差连接，不断更新每个 Token 的隐藏状态，并将结果传递给下一层 Transformer Block。多层的 Transformer Block 堆叠起来就形成了完整的 Transformer 网络。
 
+# KV Cache
+
+
 # Prefill & Decode
 
 Prefill 阶段负责处理已经存在的输入上下文。由于用户提供的完整输入序列在推理开始时就已经确定，模型可以并行处理这些 Token，通过多层 Transformer Block 计算其隐藏状态，并将 Attention 中需要复用的 Key、Value 保存到 KV Cache 中。随后，模型利用最后一个有效位置的隐藏状态预测第一个输出 Token。
