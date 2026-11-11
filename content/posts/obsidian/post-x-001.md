@@ -359,13 +359,9 @@ Prefill 阶段负责处理已经存在的输入上下文。由于输入序列中
 
 实际上，由于因果约束保证了历史 Token 的隐藏状态不会受到后续 Token 的影响，因此它们在各层 Attention 中计算得到的 Key 和 Value 也不会因为新 Token 的加入而改变。这意味着，模型可以直接复用此前计算得到的 Key 和 Value，而不必重复执行历史 Token 的前向计算。
 
-基于这一特点，现代 LLM 通常采用 **KV Cache（Key-Value Cache）** 机制，将各层 Attention 中历史 Token 对应的 Key 和 Value 保存起来，供后续生成过程使用。
+基于这一特点，现代 LLM 通常采用 **KV Cache** 机制，将各层 Attention 中历史 Token 对应的 Key 和 Value 保存起来，供后续生成过程使用。之所以缓存 Key 和 Value，而不缓存 Query，是因为在 Decode 阶段，模型只需要使用当前 Token 的 Query，与历史 Token 的 Key 计算注意力分数，再根据对应的 Value 聚合上下文信息。历史 Token 的 Query 不会直接参与当前 Token 的 Attention 计算，因此通常没有必要保存。
 
-之所以缓存 Key 和 Value，而不缓存 Query，是因为在 Decode 阶段，模型只需要使用当前 Token 的 Query，与历史 Token 的 Key 计算注意力分数，再根据对应的 Value 聚合上下文信息。历史 Token 的 Query 不会直接参与当前 Token 的 Attention 计算，因此通常没有必要保存。
-
-需要注意的是，KV Cache 保存的并不是整个序列最终的隐藏状态，而是每个 Transformer Block 中 Attention 所需的 Key 和 Value。由于不同层具有各自的投影参数，因此每一层都需要维护对应的 KV Cache。
-
-通过这种方式，模型就能够在后续生成过程中复用历史上下文的计算结果，避免每生成一个 Token 都重新处理完整的输入序列。
+需要注意的是，KV Cache 保存的并不是整个序列最终的隐藏状态，而是每个 Transformer Block 中 Attention 所需的 Key 和 Value。由于不同层具有各自的投影参数，因此每一层都需要维护对应的 KV Cache。通过这种方式，模型就能够在后续生成过程中复用历史上下文的计算结果，避免每生成一个 Token 都重新处理完整的输入序列。
 
 不过，KV Cache 并没有消除长上下文带来的全部开销。随着 Token 数量不断增加，缓存占用的显存也会持续增长，而当前 Token 在执行 Attention 时，仍然需要访问缓存中的历史 Key 和 Value。因此，KV Cache 本质上是通过增加缓存空间，减少重复计算，从而提高自回归生成的效率。
 
