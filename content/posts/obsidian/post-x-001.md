@@ -262,30 +262,6 @@ $$
 
 至此，一个完整的 Transformer Block 就完成了计算。它通过 Self-Attention 聚合上下文信息，通过 FFN 加工特征，再结合归一化和残差连接，不断更新每个 Token 的隐藏状态，并将结果传递给下一层 Transformer Block。多层的 Transformer Block 堆叠起来就形成了完整的 Transformer 网络。
 
-# KV Cache
-
-对于 Decoder-only LLM，生成过程是自回归的，即每生成一个新 Token，都会将新 Token 加入上下文并继续预测下一个 Token。一种直观的实现方式，是每次生成新 Token 后，都将完整的 Token 序列重新输入 Transformer 进行计算。但随着生成过程不断进行，如果每次都重新计算整个序列，会产生大量的重复计算。
-
-实际上，由于因果掩码保证了每个 Token 的隐藏状态只能依赖当前及之前的 Token，因此后续生成的新 Token 不会改变历史 Token已经计算得到的隐藏状态。也就是说，**历史 Token 的计算结果可以被复用，而不需要在每一轮生成时重新计算。** 
-
-基于这一特点，现代 LLM 通常采用 **KV Cache** 机制，将历史 Token 在各层 Attention 中计算得到的 Key 和 Value 保存起来，供后续生成过程使用。之所以只缓存 Key 和 Value，而不缓存 Query，是因为模型在 Decode 阶段只需要计算新加入 Token 的 Query，并将其与历史 Token 的 Key 进行匹配，再对 Value 进行加权求和。历史 Token 的 Query 不会直接参与当前 Token 的注意力计算，因此通常没有必要缓存。
-
-需要注意的是，KV Cache 保存的并不是整个序列的最终隐藏状态，而是每个 Transformer Block 中 Attention 所需的 Key 和 Value。由于不同层具有各自的投影参数，因此每一层都需要维护相应的 KV Cache。
-
-# Prefill & Decode
-
-Prefill 和 Decode 是模型在实际推理过程中的两个不同计算阶段。
-
-Prefill 阶段负责处理已经存在的输入上下文。由于用户提供的完整输入序列在推理开始时就已经确定，模型可以并行处理这些 Token，通过多层 Transformer Block 计算其隐藏状态，并将 Attention 中需要复用的 Key、Value 保存到 KV Cache 中。随后，模型利用最后一个有效位置的隐藏状态预测第一个输出 Token。
-
-需要注意的是在 Prefill 阶段依然会使用因果掩码，使每个 Token 只能关注自己及之前的 Token。因此，即使整个输入序列同时参与计算，各个位置得到的隐藏状态仍然只依赖其已有的上下文。这样才能确保历史 Token的隐藏状态是稳定的，不会因为后续 token 发生变化，以实现 KV Cache 在后续 Decode 阶段的持续复用。
-
-Prefill 完成后，模型已经根据输入上下文预测出了第一个输出 Token。但由于 Decoder-only LLM 采用自回归生成方式，一条完整的回答需要通过多轮预测逐步生成，因此模型还需要继续执行 Decode 阶段。
-
-在 Decode 阶段，模型会将上一轮刚刚生成的 Token 作为当前输入，继续通过 Transformer 计算其隐藏状态，并预测下一个 Token。这个过程与 Prefill 不同，模型不再需要重新处理完整的历史序列，而是通过 KV Cache 复用此前已经计算得到的 Key 和 Value。
-
-具体来说，当前 Token 在每一层 Attention 中都会生成新的 Query、Key 和 Value。其中，Query 会与缓存的历史 Key 以及当前 Key 计算注意力分数，再根据对应的 Value 聚合上下文信息。与此同时，当前 Token 的 Key 和 Value 也会被加入 KV Cache，供后续生成使用。这样，模型每轮只需要处理一个新的 Token，就能够利用已有的上下文信息继续预测。随着新 Token 不断生成，这一过程也会持续重复，直到满足相应的停止条件。
-
 # LM Head
 
 经过多层 Transformer Block 的计算后，模型会得到整个输入序列的最终隐藏状态。对于一个包含 $L$ 个 Token、隐藏维度为 $D$ 的输入序列，其隐藏状态仍然是一个形状为 $[B,L,D]$ 的三维张量。
@@ -329,6 +305,32 @@ $$
 | Top-p       | 保留累计概率达到阈值 p 的最小候选集合，p 越小，候选范围通常越集中；p 越大，允许更多低概率候选参与  |
 
 完成 Token 选择后，模型就得到了新的 Token ID，并将其用于后续 Decode 计算，持续生成后面的内容。
+
+
+# KV Cache
+
+对于 Decoder-only LLM，生成过程是自回归的，即每生成一个新 Token，都会将新 Token 加入上下文并继续预测下一个 Token。一种直观的实现方式，是每次生成新 Token 后，都将完整的 Token 序列重新输入 Transformer 进行计算。但随着生成过程不断进行，如果每次都重新计算整个序列，会产生大量的重复计算。
+
+实际上，由于因果掩码保证了每个 Token 的隐藏状态只能依赖当前及之前的 Token，因此后续生成的新 Token 不会改变历史 Token 已经计算得到的隐藏状态。也就是说，**历史 Token 的计算结果可以被复用，而不需要在每一轮生成时重新计算。** 
+
+基于这一特点，现代 LLM 通常采用 **KV Cache** 机制，将历史 Token 在各层 Attention 中计算得到的 Key 和 Value 保存起来，供后续生成过程使用。之所以只缓存 Key 和 Value，而不缓存 Query，是因为模型在 Decode 阶段只需要计算新加入 Token 的 Query，并将其与历史 Token 的 Key 进行匹配，再对 Value 进行加权求和。历史 Token 的 Query 不会直接参与当前 Token 的注意力计算，因此通常没有必要缓存。
+
+需要注意的是，KV Cache 保存的并不是整个序列的最终隐藏状态，而是每个 Transformer Block 中 Attention 所需的 Key 和 Value。由于不同层具有各自的投影参数，因此每一层都需要维护相应的 KV Cache。
+
+# Prefill & Decode
+
+Prefill 和 Decode 是模型在实际推理过程中的两个不同计算阶段。
+
+Prefill 阶段负责处理已经存在的输入上下文。由于用户提供的完整输入序列在推理开始时就已经确定，模型可以并行处理这些 Token，通过多层 Transformer Block 计算其隐藏状态，并将 Attention 中需要复用的 Key、Value 保存到 KV Cache 中。随后，模型利用最后一个有效位置的隐藏状态预测第一个输出 Token。
+
+需要注意的是在 Prefill 阶段依然会使用因果掩码，使每个 Token 只能关注自己及之前的 Token。因此，即使整个输入序列同时参与计算，各个位置得到的隐藏状态仍然只依赖其已有的上下文。这样才能确保历史 Token 的隐藏状态是稳定的，不会因为后续 token 发生变化，以实现 KV Cache 在后续 Decode 阶段的持续复用。
+
+Prefill 完成后，模型已经根据输入上下文预测出了第一个输出 Token。但由于 Decoder-only LLM 采用自回归生成方式，一条完整的回答需要通过多轮预测逐步生成，因此模型还需要继续执行 Decode 阶段。
+
+在 Decode 阶段，模型会将上一轮刚刚生成的 Token 作为当前输入，继续通过 Transformer 计算其隐藏状态，并预测下一个 Token。这个过程与 Prefill 不同，模型不再需要重新处理完整的历史序列，而是通过 KV Cache 复用此前已经计算得到的 Key 和 Value。
+
+具体来说，当前 Token 在每一层 Attention 中都会生成新的 Query、Key 和 Value。其中，Query 会与缓存的历史 Key 以及当前 Key 计算注意力分数，再根据对应的 Value 聚合上下文信息。与此同时，当前 Token 的 Key 和 Value 也会被加入 KV Cache，供后续生成使用。这样，模型每轮只需要处理一个新的 Token，就能够利用已有的上下文信息继续预测。随着新 Token 不断生成，这一过程也会持续重复，直到满足相应的停止条件，例如生成结束标记、达到最大输出长度等。
+
 
 # Detokenization
 
