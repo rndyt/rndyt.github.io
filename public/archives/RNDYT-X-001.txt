@@ -76,7 +76,7 @@ Authorization: Bearer YOUR_API_KEY
 
 不过，到这里得到的仍然是由文本和特殊标记组成的字符序列，大语言模型最终是运行在数字计算硬件之上，因此自然语言输入需要被转换为数值形式。
 
-# Tokenizer（分词器）
+# Tokenizer
 
 分词器的作用就是将字符序列切分为多个基本单元，并将每个基本单元映射为一个整数编号，这一基本单元就叫做词元（Token），其对应的数值则称为 Token ID，这套映射集合就是词表（Vocabulary），其作用可以类比为一本用于连接文本符号与数字编号的“字典”。
 
@@ -296,33 +296,6 @@ $$
 | Top-k       | 只保留概率最高的 k 个候选 Token，k 越小，候选范围越窄；k 越大，可选 Token 越多     |
 | Top-p       | 保留累计概率达到阈值 p 的最小候选集合，p 越小，候选范围通常越集中；p 越大，允许更多低概率候选参与  |
  
-# KV Cache
-
-对于 Decoder-only LLM，生成过程是自回归的，即每生成一个新 Token，都会将新 Token 加入上下文并继续预测下一个 Token。一种直观的实现方式，是每次生成新 Token 后，都将完整的 Token 序列重新输入 Transformer 进行计算。但随着生成过程不断进行，如果每次都重新计算整个序列，会产生大量的重复计算。
-
-实际上，由于因果掩码保证了每个 Token 的隐藏状态只能依赖当前及之前的 Token，因此后续生成的新 Token 不会改变历史 Token 已经计算得到的隐藏状态。也就是说，**历史 Token 的计算结果可以被复用，而不需要在每一轮生成时重新计算。** 
-
-基于这一特点，现代 LLM 通常采用 **KV Cache** 机制
-
-需要注意的是，KV Cache 保存的并不是整个序列的最终隐藏状态，而是每个 Transformer Block 中 Attention 所需的 Key 和 Value。由于不同层具有各自的投影参数，因此每一层都需要维护相应的 KV Cache。
-
-# Prefill & Decode
-
-至此，我们已经了解了模型如何通过 Transformer 计算隐藏状态，再经过 LM Head 和 Token Sampling 预测下一个 Token。
-
-不过，一次 Token 预测只能产生一个新的 Token，而一条完整的回答通常需要生成多个 Token。如果每次生成新 Token 后，都重新处理整个历史序列，就会产生大量重复计算。
-
-因此，现代 Decoder-only LLM 通常将实际推理过程划分为 Prefill（预填充）和 Decode（解码生成）两个阶段，并通过 KV Cache 机制复用历史计算结果，从而提高自回归生成的效率。
-
-Prefill 阶段负责处理已经存在的输入上下文。由于用户提供的完整输入序列在推理开始时就已经确定，模型可以并行处理这些 Token，通过多层 Transformer Block 计算其隐藏状态，并将 Attention 中需要复用的 Key、Value 保存到 KV Cache 中。随后，模型利用最后一个有效位置的隐藏状态预测第一个输出 Token。
-
-需要注意的是在 Prefill 阶段依然会使用因果掩码，使每个 Token 只能关注自己及之前的 Token。因此，即使整个输入序列同时参与计算，各个位置得到的隐藏状态仍然只依赖其已有的上下文。这样才能确保历史 Token 的隐藏状态是稳定的，不会因为后续 token 发生变化，以实现 KV Cache 在后续 Decode 阶段的持续复用。
-
-Prefill 完成后，模型已经根据输入上下文预测出了第一个输出 Token。但由于 Decoder-only LLM 采用自回归生成方式，一条完整的回答需要通过多轮预测逐步生成，因此模型还需要继续执行 Decode 阶段。
-
-在 Decode 阶段，模型会将上一轮刚刚生成的 Token 作为当前输入，继续通过 Transformer 计算其隐藏状态，并预测下一个 Token。这个过程与 Prefill 不同，模型不再需要重新处理完整的历史序列，而是通过 KV Cache 复用此前已经计算得到的 Key 和 Value。
-
-具体来说，当前 Token 在每一层 Attention 中都会生成新的 Query、Key 和 Value。其中，Query 会与缓存的历史 Key 以及当前 Key 计算注意力分数，再根据对应的 Value 聚合上下文信息。与此同时，当前 Token 的 Key 和 Value 也会被加入 KV Cache，供后续生成使用。这样，模型每轮只需要处理一个新的 Token，就能够利用已有的上下文信息继续预测。随着新 Token 不断生成，这一过程也会持续重复，直到满足相应的停止条件，例如生成结束标记、达到最大输出长度等。
 # Prefill & Decode
 
 至此，我们已经了解了模型如何通过 Transformer 计算隐藏状态，再经过 LM Head 和 Token Sampling 预测下一个 Token。
