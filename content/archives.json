@@ -1,8 +1,10 @@
 {
   "categories": [
+    "工程文章",
     "AI 实践"
   ],
   "columns": [
+    "工程文章",
     "AI 实践"
   ],
   "records": [
@@ -135,6 +137,34 @@
         "Agent"
       ],
       "readingMinutes": 36,
+      "preview": false
+    },
+    {
+      "id": "X-003",
+      "slug": "post-x-003",
+      "title": "下单",
+      "en": "ARTICLE",
+      "department": "工程文章",
+      "category": "工程文章",
+      "date": "2026-11-18",
+      "lead": "rndyt",
+      "clearance": "PUBLIC / 公开",
+      "abstract": "本文将以主流微服务架构下的高并发电商系统为例，梳理交易的全流程及其可靠性。",
+      "findings": [
+        "本文将以主流微服务架构下的高并发电商系统为例，梳理交易的全流程及其可靠性。"
+      ],
+      "source": "/posts/post-x-003/",
+      "body": "本文将以主流微服务架构下的高并发电商系统为例，梳理交易的全流程及其可靠性。\n\n我们可以大致将整个电商交易流程分解为下单、支付、回调三个部分。\n\n# 下单\n\n在下单阶段，我们首先需要确保的就是防止重复下单以及超卖。",
+      "bodyHtml": "<p>本文将以主流微服务架构下的高并发电商系统为例，梳理交易的全流程及其可靠性。</p>\n<p>我们可以大致将整个电商交易流程分解为下单、支付、回调三个部分。</p>\n<h1 id=\"section-1\">下单</h1><p>在下单阶段，我们首先需要确保的就是防止重复下单以及超卖。</p>\n",
+      "headings": [
+        {
+          "id": "section-1",
+          "text": "下单",
+          "depth": 1
+        }
+      ],
+      "tags": [],
+      "readingMinutes": 1,
       "preview": false
     }
   ]
