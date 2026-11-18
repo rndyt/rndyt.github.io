@@ -12,16 +12,21 @@
     "高并发系统下如何实现可靠交易.md": {
       "archiveId": "X-003",
       "slug": "post-x-003"
+    },
+    "并发控制/高并发系统下如何实现可靠交易.md": {
+      "archiveId": "X-004",
+      "slug": "post-x-004"
     }
   },
   "files": [
-    "obsidian/post-x-003.md",
+    "obsidian/post-x-004.md",
     "obsidian/post-x-001.md"
   ],
   "assets": [],
   "reservedIds": [
     "X-001",
     "X-002",
-    "X-003"
+    "X-003",
+    "X-004"
   ]
 }
